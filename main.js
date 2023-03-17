@@ -1,11 +1,6 @@
-// 1. Despot some money
-// 2. Determine number of lines to bet on
-// 3. Collect a bet amount
-// 4. Spin the slot machine
-// 5. check if the user won
-// 6. give the user their winnings
-// 7. play again
 
+const SYMBOLS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+const ROWS = 3;
 
 const prompt = require("prompt-sync")();
 
@@ -13,18 +8,9 @@ const prompt = require("prompt-sync")();
 const deposit = () => {
     let initialMoney;
     do {
-        initialMoney = parseFloat(prompt('How much money (in dollars) do you want to deposit? You can only do this once: '));
+        initialMoney = parseFloat(prompt('How much money (in dollars) do you want to deposit? '));
     } while (isNaN(initialMoney))
     return initialMoney;
-}
-
-// choose the number of lines to bet on
-const chooseLines = () => {
-    let numberOfLines;
-    do {
-        numberOfLines = parseInt(prompt('Choose how many lines to bet on (1-3): '));
-    } while (isNaN(numberOfLines) || numberOfLines > 3 || numberOfLines < 1);
-    return numberOfLines;
 }
 
 // choose the bets
@@ -36,15 +22,106 @@ const chooseBets = (totalMoney) => {
     return bet;
 }
 
-// the main game loop
-const game = () => {
-    let totalMoney = deposit();
-    let lines = chooseLines();
-    let bets = chooseBets(totalMoney);
-    console.log();
+const transpose = (matrix) => matrix[0].map((col, i) => matrix.map(row => row[i]));
 
-    console.log(`You have ${totalMoney} and you are betting on ${lines} lines with ${bets} dollars`);
+// spin the slot machine
+const spinSlotMachine = () => {
+    // get the results of the slot machine
+    let results = Array.from({length: 3}, getSymbols);
+    let resultsTranspose = transpose(results);
+
+    // return newMat;
+    for (const oneD of resultsTranspose) {
+        console.log(oneD.join(' | '));
+    }
+
+    return resultsTranspose;
 }
 
+// pick three unique indices randomly from 0 to 9 inclusive
+const getSymbols = () => {
+    let indices = new Set();
+
+    while (indices.size < ROWS) {
+        indices.add(Math.floor(Math.random() * SYMBOLS.length));
+    }
+
+    // transform the indices to symbols
+    indices = [...indices];
+    return indices.map((index) => SYMBOLS[index]);
+}
+
+// check if the user wins
+const checkWin = (res, bets) => {
+    let tempSet = new Set();
+    let multiplier, won = 0;
+
+    for (let row = 0; row < ROWS; row ++) {
+        tempSet.clear();
+        for (let col = 0; col < 3; col ++) {
+            tempSet.add(res[row][col]);
+        }
+
+        multiplier = 2 * ROWS - row;
+
+        if (tempSet.size === 2) { // two same symbols
+            console.log(`You won the second biggest prize on row ${row + 1}!`);
+            won += bets * 2 * multiplier;
+        } else if (tempSet.size === 1) { // one same symbol
+            console.log(`You won the biggest prize on row ${row + 1}!`);
+            won += bets * 3 * multiplier;
+        } else { // everything is different
+            console.log(`You didn't win anything on row ${row + 1}...`);
+        }
+    }
+
+    return won;
+}
+
+// the main game loop
+const game = () => {
+    let action, bets, res, won, gameContinue = true, totalMoney = 0;
+
+    while (gameContinue) {
+        console.log();
+        action = prompt("What do you want to do? (d)eposit, (p)lay, or (l)eave: ");
+
+        switch (action) {
+            // deposit
+            case 'd':
+                totalMoney += deposit();
+                console.log(`You currently have ${totalMoney} dollars.`);
+                break;
+
+            // play the game
+            case 'p':
+                // check if the user still has money
+                while (totalMoney === 0) {
+                    console.log("You're out of money...");
+                    totalMoney += deposit();
+                }
+
+                bets = chooseBets(totalMoney);
+                console.log("Starting slot machine...");
+
+                res = spinSlotMachine();
+                won = checkWin(res, bets);
+
+                totalMoney = totalMoney - bets + won;
+                console.log(`You currently have ${totalMoney} dollars`);
+                break;
+
+            // leave the game
+            case 'l':
+                gameContinue = false;
+                console.log("Thank you so much for playing!!");
+                break;
+
+            default:
+                console.log("Invalid action. Please try again.");
+                break;
+        }
+    }
+}
 
 game();
